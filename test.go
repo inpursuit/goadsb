@@ -8,7 +8,7 @@ import (
   "syscall"
   "container/list"
   "github.com/inpursuit/manchester"
-  "github.com/inpursuit/readadsb"
+  //"github.com/inpursuit/readadsb"
   //"encoding/hex"
   rtl "github.com/jpoirier/gortlsdr"
 )
@@ -28,12 +28,12 @@ func sig_abort(dev *rtl.Context) {
 }
 
 func rtlsdr_cb(buf []byte, userctx *rtl.UserCtx) {
-  var temp []uint16 = readadsb.Magnitute(buf[:])
+  var temp []uint16 = manchester.Magnitute(buf[:])
   //log.Printf("rtlsdr_cb received %d bytes\n",len(temp))
   manchester.Manchester(temp[:])
   //log.Printf("%X\n", temp[:])
   //log.Printf("**********************\n")
-  var msgs *list.List = readadsb.ReadMessages(temp[:])
+  var msgs *list.List = manchester.ReadMessages(temp[:])
   //log.Printf("\tMessages: %d\n", msgs.Len())
   for msg := msgs.Front(); msg != nil; msg = msg.Next() {
     printData(msg.Value.([]int))
