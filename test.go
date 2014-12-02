@@ -2,9 +2,13 @@ package main
 
 import (
   "log"
+  "fmt"
   "os"
   "os/signal"
   "syscall"
+  "container/list"
+  "github.com/inpursuit/manchester"
+  "github.com/inpursuit/readadsb"
   //"encoding/hex"
   rtl "github.com/jpoirier/gortlsdr"
 )
@@ -16,10 +20,32 @@ func sig_abort(dev *rtl.Context) {
   //Wait for the Channel to return something.  Discarding
   //the retruned value since we know it's SIGINT
   <-ch
+  log.Printf("SIGINT signal received!\n")
   //This code will execute after SIGINT is returned
   _ = dev.CancelAsync()
   dev.Close()
   os.Exit(0)
+}
+
+func rtlsdr_cb(buf []byte, userctx *rtl.UserCtx) {
+  var temp []uint16 = readadsb.Magnitute(buf[:])
+  //log.Printf("rtlsdr_cb received %d bytes\n",len(temp))
+  manchester.Manchester(temp[:])
+  //log.Printf("%X\n", temp[:])
+  //log.Printf("**********************\n")
+  var msgs *list.List = readadsb.ReadMessages(temp[:])
+  //log.Printf("\tMessages: %d\n", msgs.Len())
+  for msg := msgs.Front(); msg != nil; msg = msg.Next() {
+    printData(msg.Value.([]int))
+  }
+}
+
+func printData(value []int) {
+  fmt.Printf("*")
+  for i:=0; i<len(value); i++ {
+    fmt.Printf("%X", value[i])
+  }
+  fmt.Printf("\n")
 }
 
 func main() {
@@ -46,9 +72,19 @@ func main() {
     log.Printf("\tSetCenterFreq 1090Mhz Failed, error: %s\n", err)
   }
 
-  dev.SetTestMode(true)
+  //dev.SetTestMode(true)
   dev.ResetBuffer()
 
+  IQch := make(chan bool)
+  var userctx rtl.UserCtx = IQch
+  err = dev.ReadAsync(rtlsdr_cb, &userctx, rtl.DefaultAsyncBufNumber, 512)
+  if err == nil {
+    log.Printf("\tReadAsync Successful\n")
+  } else {
+    log.Printf("\rReadAsync FAILED - error: %s\n", err)
+  }
+
+  /*
   var buffer []byte = make([]uint8, rtl.DefaultBufLength)
   //var hexbuf []byte = make([]uint8, rtl.DefaultBufLength)
   n_read, err := dev.ReadSync(buffer, rtl.DefaultBufLength)
@@ -62,5 +98,6 @@ func main() {
   if err == nil && n_read < rtl.DefaultBufLength {
     log.Printf("ReadSynch short read, %d samples lost\n", rtl.DefaultBufLength-n_read)
   }
+  */
   log.Printf("Exiting...\n")
 }
