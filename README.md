@@ -33,6 +33,15 @@ Unplug the USB device then restart udev: *sudo restart udev*
 
 Plug back in the USB device.
 
+### USB Claim Error
+If you encounter a USB Claim Error that says something like "Kernel drive is active or device is claimed by a second instance of librtlsdr" then you need to prevent the Linux kernel from loading device drivers when the SDR is plugged in.  To do this create a file called "no-rtl.conf" in the "/etc/modprobe.d/" directory and add the following lines:
+
+  blacklist dvd_usb_rtl28xxu
+  blacklist rtl2832
+  blacklist rtl2830
+
+Then restart.
+
 Source
 ------
 
